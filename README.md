@@ -14,9 +14,9 @@ This is tested on Kinetic/Ubuntu16.04 and Android only.
 
 ### Note
 
-Cozmo SDK will become idle mode if the message is not send to cozmo for a few minutes.
+Cozmo SDK will become idle mode if the message is not sent to cozmo for a few minutes.
 You need send some messages repeatedly if you don't want to use idle mode.
-I mean that when the camera has been stopped, try to send some command like /cmd_vel.
+I mean that when the camera has been stopped, try to send some command, for example /cmd_vel.
 
 ## Super hack to run rospy from python3
 
@@ -31,8 +31,8 @@ sudo pip3 install rospkg catkin_pkg
 
 ## TODO
 
-* difficult to use tf2 on python3, it has tf2.so. How can we use?
-transform_stamped_to_tf2.py will convert the transform message to tf2 message.
+* difficult to use tf2 on python3, it has tf2.so. How can we use it?
+transform_stamped_to_tf2.py (run on python2) will convert the transform message to tf2 message.
 * use trajectory_msgs to command head angle and lift height.
 
 ## Pub/Sub
@@ -40,8 +40,8 @@ transform_stamped_to_tf2.py will convert the transform message to tf2 message.
 ### Publish
 
  * /image (sensor_msgs/Image) : camera image from cozmo. This is gray scale, but the format is rgb8.
- * /joint_states (sensor_msgs/JointState) : This contains head angle and lift height
- * /transforms (geometry_msgs/TransformStamped) : poses of visialbe cubes and cozmo. if you need /tf, use transform_stamped_to_tf2.py
+ * /joint_states (sensor_msgs/JointState) : This contains the head angle [rad] and the lift height [m]
+ * /transforms (geometry_msgs/TransformStamped) : poses of visialbe cubes and cozmo. If you need /tf, use transform_stamped_to_tf2.py
  * /imu (sensor_msgs/Imu) : Imu mounted on cozmo head
  * /battery (sensor_msgs/BatteryState) : battery voltage and charging status
 
@@ -56,7 +56,7 @@ transform_stamped_to_tf2.py will convert the transform message to tf2 message.
 
 ## Install cozmo SDK on Ubuntu16.04 and Android
 
-Please follow [original document](http://cozmosdk.anki.com/docs/install-linux.html#install-linux). Below is super quick hacky installation for only me.
+Please follow the [original document](http://cozmosdk.anki.com/docs/install-linux.html#install-linux). Below is a quick hacky installation for only me.
 
 ```bash
 sudo apt-get update
