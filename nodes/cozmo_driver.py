@@ -60,7 +60,7 @@ class CozmoRos(object):
         self._cozmo.say_text(msg.data)
 
     def _publish_objects(self):
-        def convert_pose_to_ros_msg(pose):
+        def convert_pose_to_tf_msg(pose):
             transform_msg = Transform()
             transform_msg.translation.x = pose.position.x * 0.001
             transform_msg.translation.y = pose.position.y * 0.001
@@ -77,7 +77,7 @@ class CozmoRos(object):
             transform_msg.header.stamp = rospy.Time.now()
             transform_msg.header.frame_id = name
             transform_msg.child_frame_id = 'map'
-            transform_msg.transform = convert_pose_to_ros_msg(pose)
+            transform_msg.transform = convert_pose_to_tf_msg(pose)
             return transform_msg
 
         for obj in self._cozmo.world.visible_objects:
