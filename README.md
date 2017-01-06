@@ -60,3 +60,9 @@ sudo apt-get update
 sudo apt-get install python3 python3-pip python3-pil.imagetk default-jre adb
 pip3 install --user 'cozmo[camera]'
 ```
+
+## Hardware configuration
+
+It is normal for Cozmo SDK, but it has below hardware configuration. ROS is running on your **PC** not on Cozmo.
+
+**Cozmo** (WiFi station) <-- WiFi --> **Phone** (Android) <-- USB cable --> **PC** (Cozmo official SDK <-> ROS)
