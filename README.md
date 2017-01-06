@@ -14,9 +14,7 @@ This is tested on Kinetic/Ubuntu16.04 and Android only.
 
 ### Note
 
-Cozmo SDK will become idle mode if the message is not sent to cozmo for a few minutes.
-You need send some messages repeatedly if you don't want to use idle mode.
-I mean that when the camera has been stopped, try to send some command, for example /cmd_vel.
+Cozmo SDK will become idle mode if the message is not sent to cozmo for a few minutes. To avoid idle mode, cozmo_driver.py is sending /cmd_vel repeatedly in 10[Hz].
 
 ## Super hack to run rospy from python3
 

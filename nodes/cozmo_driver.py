@@ -25,21 +25,24 @@ class CozmoRos(object):
     '''
     def __init__(self, coz):
         self._cozmo = coz
-        self._twist_sub = rospy.Subscriber('cmd_vel', Twist, self._twist_callback)
+        self._twist_sub = rospy.Subscriber('cmd_vel', Twist,
+                                           self._twist_callback)
         self._say_sub = rospy.Subscriber('say', String, self._say_callback)
-        self._head_sub = rospy.Subscriber('head_angle', Float64, self._move_head,
-                                          queue_size=1)
-        self._lift_sub = rospy.Subscriber('lift_height', Float64, self._move_lift,
-                                          queue_size=1)
-        # TODO: better to use array (length=5)
+        self._head_sub = rospy.Subscriber('head_angle', Float64,
+                                          self._move_head, queue_size=1)
+        self._lift_sub = rospy.Subscriber('lift_height', Float64,
+                                          self._move_lift, queue_size=1)
+        # TODO: better to use array (It has 5 LEDs actually)
         self._backpack_led_sub = rospy.Subscriber(
             'backpack_led', ColorRGBA, self._set_backpack_led, queue_size=1)
         self._image_pub = rospy.Publisher('image', Image, queue_size=100)
         self._joint_state_pub = rospy.Publisher('joint_states', JointState,
                                                 queue_size=100)
         self._imu_pub = rospy.Publisher('imu', Imu, queue_size=100)
-        self._battery_pub = rospy.Publisher('battery', BatteryState, queue_size=100)
+        self._battery_pub = rospy.Publisher('battery', BatteryState,
+                                            queue_size=100)
         self._tf_br = rospy.Publisher('/tf', TFMessage, queue_size=100)
+        self._wheel_vel = (0, 0)
 
     def _move_head(self, cmd):
         action = self._cozmo.set_head_angle(radians(cmd.data), duration=0.1,
@@ -47,8 +50,8 @@ class CozmoRos(object):
         action.wait_for_completed()
 
     def _move_lift(self, cmd):
-        action = self._cozmo.set_lift_height(height=cmd.data * 10, duration=0.2,
-                                             in_parallel=True)
+        action = self._cozmo.set_lift_height(height=cmd.data * 10,
+                                             duration=0.2, in_parallel=True)
         action.wait_for_completed()
 
     def _set_backpack_led(self, msg):
@@ -61,7 +64,7 @@ class CozmoRos(object):
         # TODO: convert m/s to motor speed actually
         lv = (cmd.linear.x + cmd.angular.z) * 100.0
         rv = (cmd.linear.x - cmd.angular.z) * 100.0
-        self._cozmo.drive_wheels(lv, rv)
+        self._wheel_vel = (lv, rv)
 
     def _say_callback(self, msg):
         self._cozmo.say_text(msg.data).wait_for_completed()
@@ -86,7 +89,9 @@ class CozmoRos(object):
             transform_msg.transform = convert_pose_to_tf_msg(pose)
             return transform_msg
 
-        tf_messages = [convert_pose_to_ros_msg(obj.pose, 'cube_' + str(obj.object_id)) for obj in self._cozmo.world.visible_objects]
+        tf_messages = [convert_pose_to_ros_msg(obj.pose,
+                                               'cube_' + str(obj.object_id))
+                       for obj in self._cozmo.world.visible_objects]
         tf_messages.append(convert_pose_to_ros_msg(self._cozmo.pose, 'cozmo'))
         self._tf_br.publish(TFMessage(tf_messages))
 
@@ -102,8 +107,7 @@ class CozmoRos(object):
             ros_img.data = img.tobytes()
             ros_img.header.frame_id = 'cozmo_camera'
             cozmo_time = camera_image.image_recv_time
-#            ros_img.header.stamp = rospy.Time.from_sec(cozmo_time)
-            ros_img.header.stamp = rospy.Time.now()
+            ros_img.header.stamp = rospy.Time.from_sec(cozmo_time)
             self._image_pub.publish(ros_img)
 
     def _publish_joint_state(self):
@@ -138,7 +142,7 @@ class CozmoRos(object):
         battery.header.stamp = rospy.Time.now()
         battery.voltage = self._cozmo.battery_voltage
         battery.present = True
-        if self._cozmo.is_on_charger: # is_charging always return False
+        if self._cozmo.is_on_charger:  # is_charging always return False
             battery.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_CHARGING
         else:
             battery.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_NOT_CHARGING
@@ -152,6 +156,9 @@ class CozmoRos(object):
             self._publish_joint_state()
             self._publish_imu()
             self._publish_battery()
+            # send message repeatedly to avoid idle mode.
+            # This might cause low battery soon
+            self._cozmo.drive_wheels(*self._wheel_vel)
             r.sleep()
         self._cozmo.stop_all_motors()
 
