@@ -31,9 +31,8 @@ sudo pip3 install rospkg catkin_pkg
 
 ## TODO
 
-* difficult to use tf2 on python3, it has tf2.so. How can we use it?
-transform_stamped_to_tf2.py (run on python2) will convert the transform message to tf2 message.
 * use trajectory_msgs to command head angle and lift height.
+* control and get states of cubes
 
 ## Pub/Sub
 
@@ -41,7 +40,7 @@ transform_stamped_to_tf2.py (run on python2) will convert the transform message 
 
  * /image (sensor_msgs/Image) : camera image from cozmo. This is gray scale, but the format is rgb8.
  * /joint_states (sensor_msgs/JointState) : This contains the head angle [rad] and the lift height [m]
- * /transforms (geometry_msgs/TransformStamped) : poses of visialbe cubes and cozmo. If you need /tf, use transform_stamped_to_tf2.py
+ * /tf (tf2_msgs/TFMessage) : poses of visialbe cubes and cozmo.
  * /imu (sensor_msgs/Imu) : Imu mounted on cozmo head
  * /battery (sensor_msgs/BatteryState) : battery voltage and charging status
 

@@ -10,6 +10,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Transform
 from geometry_msgs.msg import TransformStamped
+from tf2_msgs.msg import TFMessage
 from std_msgs.msg import String
 from std_msgs.msg import Float64
 from std_msgs.msg import ColorRGBA
@@ -38,8 +39,7 @@ class CozmoRos(object):
                                                 queue_size=100)
         self._imu_pub = rospy.Publisher('imu', Imu, queue_size=100)
         self._battery_pub = rospy.Publisher('battery', BatteryState, queue_size=100)
-        self._tf_br = rospy.Publisher('transforms', TransformStamped,
-                                      queue_size=100)
+        self._tf_br = rospy.Publisher('/tf', TFMessage, queue_size=100)
 
     def _move_head(self, cmd):
         action = self._cozmo.set_head_angle(radians(cmd.data), duration=0.1,
@@ -79,7 +79,6 @@ class CozmoRos(object):
             return transform_msg
 
         def convert_pose_to_ros_msg(pose, name):
-            # TODO: use TransformStamped with tf2
             transform_msg = TransformStamped()
             transform_msg.header.stamp = rospy.Time.now()
             transform_msg.header.frame_id = 'map'
@@ -87,10 +86,9 @@ class CozmoRos(object):
             transform_msg.transform = convert_pose_to_tf_msg(pose)
             return transform_msg
 
-        for obj in self._cozmo.world.visible_objects:
-            self._tf_br.publish(
-                convert_pose_to_ros_msg(obj.pose, 'cube_' + str(obj.object_id)))
-        self._tf_br.publish(convert_pose_to_ros_msg(self._cozmo.pose, 'cozmo'))
+        tf_messages = [convert_pose_to_ros_msg(obj.pose, 'cube_' + str(obj.object_id)) for obj in self._cozmo.world.visible_objects]
+        tf_messages.append(convert_pose_to_ros_msg(self._cozmo.pose, 'cozmo'))
+        self._tf_br.publish(TFMessage(tf_messages))
 
     def _publish_image(self):
         camera_image = self._cozmo.world.latest_image
