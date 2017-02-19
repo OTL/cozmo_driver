@@ -9,6 +9,21 @@ compatible, the famous "transformations.py" is shipped next
 to this node. Also the TransformBroadcaster is taken from
 ROS tf ones.
 
+Copyright {2016} {Takashi Ogura}
+Copyright {2017} {Peter Rudolph}
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 """
 # system
 import sys
@@ -120,8 +135,6 @@ class CozmoRos(object):
         camera_info_url = rospy.get_param('~camera_info_url', '')
 
         # pubs
-        self._backpack_led_sub = rospy.Subscriber(
-            'backpack_led', ColorRGBA, self._set_backpack_led, queue_size=1)
         self._joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=1)
         self._imu_pub = rospy.Publisher('imu', Imu, queue_size=10)
         self._battery_pub = rospy.Publisher('battery', BatteryState, queue_size=1)
@@ -130,6 +143,8 @@ class CozmoRos(object):
         self._camera_info_pub = rospy.Publisher('/cozmo_camera/camera_info', CameraInfo, queue_size=10)
 
         # subs
+        self._backpack_led_sub = rospy.Subscriber(
+            'backpack_led', ColorRGBA, self._set_backpack_led, queue_size=1)
         self._twist_sub = rospy.Subscriber('cmd_vel', Twist, self._twist_callback, queue_size=1)
         self._say_sub = rospy.Subscriber('say', String, self._say_callback, queue_size=1)
         self._head_sub = rospy.Subscriber('head_angle', Float64, self._move_head, queue_size=1)
@@ -156,7 +171,8 @@ class CozmoRos(object):
         Move lift to given height.
 
         :type   cmd:    Float64
-        :param  cmd:    The height in millimeters.
+        :param  cmd:    A value between [0 - 1], the SDK auto
+                        scales it to the according height.
 
         """
         action = self._cozmo.set_lift_height(height=cmd.data,
