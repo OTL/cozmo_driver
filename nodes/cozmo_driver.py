@@ -28,6 +28,7 @@ limitations under the License.
 # system
 import sys
 import numpy as np
+from copy import deepcopy
 
 # cozmo SDK
 import cozmo
@@ -40,6 +41,7 @@ from camera_info_manager import CameraInfoManager
 
 # ROS msgs
 from tf2_msgs.msg import TFMessage
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import (
     Twist,
     TransformStamped
@@ -118,6 +120,11 @@ class CozmoRos(object):
 
         # vars
         self._cozmo = coz
+        self._lin_vel = .0
+        self._ang_vel = .0
+        self._cmd_lin_vel = .0
+        self._cmd_ang_vel = .0
+        self._last_pose = self._cozmo.pose
         self._wheel_vel = (0, 0)
         self._optical_frame_orientation = quaternion_from_euler(-np.pi/2., .0, -np.pi/2.)
         self._camera_info_manager = CameraInfoManager('cozmo_camera', namespace='/cozmo_camera')
@@ -136,7 +143,8 @@ class CozmoRos(object):
 
         # pubs
         self._joint_state_pub = rospy.Publisher('joint_states', JointState, queue_size=1)
-        self._imu_pub = rospy.Publisher('imu', Imu, queue_size=10)
+        self._odom_pub = rospy.Publisher('odom', Odometry, queue_size=1)
+        self._imu_pub = rospy.Publisher('imu', Imu, queue_size=1)
         self._battery_pub = rospy.Publisher('battery', BatteryState, queue_size=1)
         # Note: camera is published under global topic (preceding "/")
         self._image_pub = rospy.Publisher('/cozmo_camera/image', Image, queue_size=10)
@@ -206,11 +214,11 @@ class CozmoRos(object):
 
         """
         # compute differential wheel speed
-        axle_length = 0.05  # 5cm
-        v_lin = cmd.linear.x
-        v_ang = cmd.angular.z
-        rv = v_lin + (v_ang * axle_length * 0.5)
-        lv = v_lin - (v_ang * axle_length * 0.5)
+        axle_length = 0.07  # 7cm
+        self._cmd_lin_vel = cmd.linear.x
+        self._cmd_ang_vel = cmd.angular.z
+        rv = self._cmd_lin_vel + (self._cmd_ang_vel * axle_length * 0.5)
+        lv = self._cmd_lin_vel - (self._cmd_ang_vel * axle_length * 0.5)
         self._wheel_vel = (lv*1000., rv*1000.)  # convert to mm / s
 
     def _say_callback(self, msg):
@@ -251,17 +259,18 @@ class CozmoRos(object):
         # get latest image from cozmo's camera
         camera_image = self._cozmo.world.latest_image
         if camera_image is not None:
-            img = camera_image.raw_image
+            # convert image to gray scale as it is gray although
+            img = camera_image.raw_image.convert('L')
             ros_img = Image()
-            ros_img.encoding = 'rgb8'
+            ros_img.encoding = 'mono8'
             ros_img.width = img.size[0]
             ros_img.height = img.size[1]
-            ros_img.step = 3 * ros_img.width
+            ros_img.step = ros_img.width
             ros_img.data = img.tobytes()
             ros_img.header.frame_id = 'cozmo_camera'
             cozmo_time = camera_image.image_recv_time
             ros_img.header.stamp = rospy.Time.from_sec(cozmo_time)
-            # publish image and camera info
+            # publish images and camera info
             self._image_pub.publish(ros_img)
             camera_info = self._camera_info_manager.getCameraInfo()
             camera_info.header = ros_img.header
@@ -329,9 +338,38 @@ class CozmoRos(object):
             battery.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_NOT_CHARGING
         self._battery_pub.publish(battery)
 
-    def _publish_tf(self):
+    def _publish_odometry(self):
         """
-        Broadcast current transformations.
+        Publish current pose as Odometry message.
+
+        """
+        # only publish if we have a subscriber
+        if self._odom_pub.get_num_connections() == 0:
+            return
+
+        now = rospy.Time.now()
+        odom = Odometry()
+        odom.header.frame_id = self._odom_frame
+        odom.header.stamp = now
+        odom.child_frame_id = self._footprint_frame
+        odom.pose.pose.position.x = self._cozmo.pose.position.x * 0.001
+        odom.pose.pose.position.y = self._cozmo.pose.position.y * 0.001
+        odom.pose.pose.position.z = self._cozmo.pose.position.z * 0.001
+        q = quaternion_from_euler(.0, .0, self._cozmo.pose_angle.radians)
+        odom.pose.pose.orientation.x = q[0]
+        odom.pose.pose.orientation.y = q[1]
+        odom.pose.pose.orientation.z = q[2]
+        odom.pose.pose.orientation.w = q[3]
+        odom.pose.covariance = np.diag([1e-2, 1e-2, 1e-2, 1e3, 1e3, 1e-1]).ravel()
+        odom.twist.twist.linear.x = self._lin_vel
+        odom.twist.twist.angular.z = self._ang_vel
+        odom.twist.covariance = np.diag([1e-2, 1e3, 1e3, 1e3, 1e3, 1e-2]).ravel()
+        self._odom_pub.publish(odom)
+
+    def _publish_tf(self, update_rate):
+        """
+        Broadcast current transformations and update
+        measured velocities for odometry twist.
 
         Published transforms:
 
@@ -347,6 +385,15 @@ class CozmoRos(object):
         y = self._cozmo.pose.position.y * 0.001
         z = self._cozmo.pose.position.z * 0.001
 
+        # compute current linear and angular velocity from pose change
+        # Note: Sign for linear velocity is taken from commanded velocities!
+        # Note: The angular velocity can also be taken from gyroscopes!
+        delta_pose = self._last_pose - self._cozmo.pose
+        self._lin_vel = np.sqrt(delta_pose.position.x**2
+                                + delta_pose.position.y**2
+                                + delta_pose.position.z**2) * update_rate * np.sign(self._cmd_lin_vel)
+        self._ang_vel = -delta_pose.rotation.angle_z.radians * update_rate
+
         # publish odom_frame -> footprint_frame
         q = quaternion_from_euler(.0, .0, self._cozmo.pose_angle.radians)
         self._tfb.send_transform(
@@ -355,21 +402,24 @@ class CozmoRos(object):
         # publish footprint_frame -> base_frame
         q = quaternion_from_euler(.0, -self._cozmo.pose_pitch.radians, .0)
         self._tfb.send_transform(
-            (0.0, 0.0, 0.01), q, now, self._base_frame, self._footprint_frame)
+            (0.0, 0.0, 0.02), q, now, self._base_frame, self._footprint_frame)
 
         # publish base_frame -> head_frame
         q = quaternion_from_euler(.0, -self._cozmo.head_angle.radians, .0)
         self._tfb.send_transform(
-            (0.02, 0.0, 0.04), q, now, self._head_frame, self._base_frame)
+            (0.02, 0.0, 0.05), q, now, self._head_frame, self._base_frame)
 
         # publish head_frame -> camera_frame
         self._tfb.send_transform(
-            (0.02, 0.0, -0.02), (0.0, 0.0, 0.0, 1.0), now, self._camera_frame, self._head_frame)
+            (0.025, 0.0, -0.015), (0.0, 0.0, 0.0, 1.0), now, self._camera_frame, self._head_frame)
 
         # publish camera_frame -> camera_optical_frame
         q = self._optical_frame_orientation
         self._tfb.send_transform(
             (0.0, 0.0, 0.0), q, now, self._camera_optical_frame, self._camera_frame)
+
+        # store last pose
+        self._last_pose = deepcopy(self._cozmo.pose)
 
     def run(self, update_rate=10):
         """
@@ -381,12 +431,13 @@ class CozmoRos(object):
         """
         r = rospy.Rate(update_rate)
         while not rospy.is_shutdown():
-            self._publish_tf()
+            self._publish_tf(update_rate)
             self._publish_image()
             self._publish_objects()
             self._publish_joint_state()
             self._publish_imu()
             self._publish_battery()
+            self._publish_odometry()
             # send message repeatedly to avoid idle mode.
             # This might cause low battery soon
             # TODO improve this!
