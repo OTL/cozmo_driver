@@ -1,0 +1,15 @@
+camera_matrix:
+  data: !!python/tuple [289.9859761735648, 0.0, 163.67457016769845, 0.0, 289.7572903404558,
+    114.68658050796701, 0.0, 0.0, 1.0]
+camera_name: cozmo_camera
+distortion_coefficients:
+  data: !!python/tuple [0.020986440458443105, -0.01755666271998951, 0.0003281616739198983,
+    0.003950101793499419, 0.0]
+distortion_model: plumb_bob
+image_height: 240
+image_width: 320
+projection_matrix:
+  data: !!python/tuple [290.808837890625, 0.0, 164.3813536764501, 0.0, 0.0, 291.4736633300781,
+    114.29168104520431, 0.0, 0.0, 0.0, 1.0, 0.0]
+rectification_matrix:
+  data: !!python/tuple [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
