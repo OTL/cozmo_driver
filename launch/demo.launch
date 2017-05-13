@@ -15,14 +15,6 @@
     <param name="camera_info_url" value="file://$(find cozmo_driver)/config/cozmo_camera.yaml" />
   </node>
 
-  <!-- Head angle / lift height teleoperation -->
-  <node pkg="cozmo_driver" type="head_lift_joy.py" name="head_lift_joy_node"
-        output="screen" >
-    <remap from="joy"         to="joy_teleop/joy"     />
-    <remap from="head_angle"  to="cozmo/head_angle"   />
-    <remap from="lift_height" to="cozmo/lift_height"  />
-  </node>
-
   <!--
   INPUT
   -->
@@ -34,6 +26,15 @@
   </node>
 
   <!-- Teleoperation -->
+  <node unless="$(arg use_joy)"
+        pkg="cozmo_driver" type="teleop_key.py" name="teleop_node"
+        output="screen" >
+    <remap from="cmd_vel" to="key_teleop/cmd_vel"/>
+    <remap from="head_angle"  to="cozmo/head_angle"   />
+    <remap from="lift_height" to="cozmo/lift_height"  />
+  </node>
+
+  <!-- Joystick Teleoperation (optional) -->
   <group if="$(arg use_joy)"
          ns="joy_teleop">
 
@@ -43,8 +44,17 @@
       <param name="dev" value="$(arg joy_dev)" />
     </node>
 
-    <node pkg="teleop_twist_joy" type="teleop_node" name="teleop_node"/>
+    <node pkg="teleop_twist_joy" type="teleop_node" name="teleop_node" />
   </group>
+
+  <!-- Head angle / lift height teleoperation -->
+  <node if="$(arg use_joy)"
+      pkg="cozmo_driver" type="head_lift_joy.py" name="head_lift_joy_node"
+      output="screen" >
+    <remap from="joy"         to="joy_teleop/joy"     />
+    <remap from="head_angle"  to="cozmo/head_angle"   />
+    <remap from="lift_height" to="cozmo/lift_height"  />
+  </node>
 
   <!--
   VISUALIZATION
