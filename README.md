@@ -33,7 +33,6 @@ Note: To get further python3 compat a local version of "transformations.py" is i
 
 ## TODO
 
-* use trajectory_msgs to command head angle and lift height.
 * control and get states of cubes
 
 ## Pub / Sub / Tf
@@ -45,6 +44,7 @@ Note: To get further python3 compat a local version of "transformations.py" is i
  * /joint_states (sensor_msgs/JointState) : This contains the head angle [rad] and the lift height [m]
  * /imu (sensor_msgs/Imu) : Imu mounted on cozmo head
  * /battery (sensor_msgs/BatteryState) : battery voltage and charging status
+ * /diagnostics (diagnostic_msgs/DiagnosticArray) : Several robot diagnostics.
 
 ### Subscribe
 
@@ -80,3 +80,16 @@ pip3 install --user 'cozmo[camera]'
 It is normal for Cozmo SDK, but it has below hardware configuration. ROS is running on your **PC** not on Cozmo.
 
 **Cozmo** (WiFi station) <-- WiFi --> **Phone** (Android) <-- USB cable --> **PC** (Cozmo official SDK <-> ROS)
+
+
+## Demo Applications
+
+### RatSLAM
+
+This demo application starts a SLAM system utilizing a biological inspired SLAM, called RatSLAM. In a few words, it is a
+monocular visiual SLAM building an experience map from odometry and image information. The provided version supports a simple
+navigation system using a naive path follow controller. So be careful while using it, as neither Cozmo nor the path controller
+provide collision avoidance!
+
+To get the RatSLAM demo working you need to build the sources from [here](https://github.com/sem23/ratslam.git) in your ROS workspace.
+
