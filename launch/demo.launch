@@ -1,7 +1,7 @@
 <launch>
 
   <!-- ARGUMENTS -->
-  <arg name="use_joy" default="true"            />
+  <arg name="use_joy" default="false"           />
   <arg name="joy_dev" default="/dev/input/js0"  />
 
   <!--

@@ -12,6 +12,11 @@ This is tested on Kinetic/Ubuntu16.04 and Android only. Latest version is tested
  * (Android)
  * (Cozmo SDK 0.10)
 
+Use rosdep to install the required ROS packages:
+```sh
+rosdep install cozmo_driver
+```
+
 ### Note
 
 Cozmo SDK will become idle mode if the message is not sent to cozmo for a few minutes. To avoid idle mode, cozmo_driver.py is sending /cmd_vel repeatedly in 10[Hz].
@@ -33,7 +38,7 @@ Note: To get further python3 compat a local version of "transformations.py" is i
 
 ## TODO
 
-* control and get states of cubes
+Feel free to provide new ToDo's at Githubs Issues page!
 
 ## Pub / Sub / Tf
 
@@ -84,12 +89,30 @@ It is normal for Cozmo SDK, but it has below hardware configuration. ROS is runn
 
 ## Demo Applications
 
+### Cozmo Driver
+
+This demo application starts the Cozmo ROS driver, a keyboard teleoperation node and a twist multiplexing node. Additionally rviz is started for visiualization.
+Optionally joystick input can be used with argument "use_joy".
+
+```sh
+roslaunch cozmo_driver demo.launch
+```
+
+To enable joystick use:
+```
+roslaunch cozmo_driver demo.launch use_joy:=true
+```
+
 ### RatSLAM
+
+**Note:** To get the RatSLAM demo working you need to build the sources from [here](https://github.com/sem23/ratslam.git) in your ROS workspace.
 
 This demo application starts a SLAM system utilizing a biological inspired SLAM, called RatSLAM. In a few words, it is a
 monocular visiual SLAM building an experience map from odometry and image information. The provided version supports a simple
 navigation system using a naive path follow controller. So be careful while using it, as neither Cozmo nor the path controller
 provide collision avoidance!
 
-To get the RatSLAM demo working you need to build the sources from [here](https://github.com/sem23/ratslam.git) in your ROS workspace.
+```sh
+roslaunch cozmo_driver ratslam.launch
+```
 
