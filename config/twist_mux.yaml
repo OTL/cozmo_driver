@@ -1,12 +1,16 @@
 topics:
+- name    : key
+  topic   : key_teleop/cmd_vel
+  timeout : 0.1
+  priority: 5
 - name    : joy
   topic   : joy_teleop/cmd_vel
   timeout : 0.5
-  priority: 10
+  priority: 4
 - name    : interactive_marker
   topic   : twist_marker_server/cmd_vel
   timeout : 0.5
-  priority: 8
+  priority: 3
 - name    : autonomy
   topic   : platform_control/cmd_vel
   timeout : 0.5

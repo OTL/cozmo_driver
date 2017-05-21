@@ -40,6 +40,7 @@ from transformations import quaternion_from_euler
 from camera_info_manager import CameraInfoManager
 
 # ROS msgs
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from tf2_msgs.msg import TFMessage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import (
@@ -158,9 +159,44 @@ class CozmoRos(object):
         self._head_sub = rospy.Subscriber('head_angle', Float64, self._move_head, queue_size=1)
         self._lift_sub = rospy.Subscriber('lift_height', Float64, self._move_lift, queue_size=1)
 
+        # diagnostics
+        self._diag_array = DiagnosticArray()
+        self._diag_array.header.frame_id = self._base_frame
+        diag_status = DiagnosticStatus()
+        diag_status.hardware_id = 'Cozmo Robot'
+        diag_status.name = 'Cozmo Status'
+        diag_status.values.append(KeyValue(key='Battery Voltage', value=''))
+        diag_status.values.append(KeyValue(key='Head Angle', value=''))
+        diag_status.values.append(KeyValue(key='Lift Height', value=''))
+        self._diag_array.status.append(diag_status)
+        self._diag_pub = rospy.Publisher('/diagnostics', DiagnosticArray, queue_size=1)
+
         # camera info manager
         self._camera_info_manager.setURL(camera_info_url)
         self._camera_info_manager.loadCameraInfo()
+
+    def _publish_diagnostics(self):
+        # alias
+        diag_status = self._diag_array.status[0]
+
+        # fill diagnostics array
+        battery_voltage = self._cozmo.battery_voltage
+        diag_status.values[0].value = '{:.2f} V'.format(battery_voltage)
+        diag_status.values[1].value = '{:.2f} deg'.format(self._cozmo.head_angle.degrees)
+        diag_status.values[2].value = '{:.2f} mm'.format(self._cozmo.lift_height.distance_mm)
+        if battery_voltage > 3.5:
+            diag_status.level = DiagnosticStatus.OK
+            diag_status.message = 'Everything OK!'
+        elif battery_voltage > 3.4:
+            diag_status.level = DiagnosticStatus.WARN
+            diag_status.message = 'Battery low! Go charge soon!'
+        else:
+            diag_status.level = DiagnosticStatus.ERROR
+            diag_status.message = 'Battery very low! Cozmo will power off soon!'
+
+        # update message stamp and publish
+        self._diag_array.header.stamp = rospy.Time.now()
+        self._diag_pub.publish(self._diag_array)
 
     def _move_head(self, cmd):
         """
@@ -439,6 +475,7 @@ class CozmoRos(object):
             self._publish_imu()
             self._publish_battery()
             self._publish_odometry()
+            self._publish_diagnostics()
             # send message repeatedly to avoid idle mode.
             # This might cause low battery soon
             # TODO improve this!
@@ -468,6 +505,7 @@ def cozmo_app(coz_conn):
 
 if __name__ == '__main__':
     rospy.init_node('cozmo_driver')
+    cozmo.setup_basic_logging()
     try:
         cozmo.connect(cozmo_app)
     except cozmo.ConnectionError as e:

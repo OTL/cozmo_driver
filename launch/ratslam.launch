@@ -1,0 +1,36 @@
+<launch>
+
+  <arg name="config_path" value="$(find cozmo_driver)/config" />
+
+  <node name="RatSLAMLocalViewCells" pkg="ratslam_ros" type="ratslam_lv"
+        args="$(arg config_path)/ratslam.txt"
+        required="true" >
+    <remap from="image"         to="cozmo_camera/image" />
+    <param name="lvm_file_path" value="$(arg config_path)/ratslam-latest.blvm" />
+  </node>
+
+  <node name="RatSLAMPoseCells" pkg="ratslam_ros" type="ratslam_pc"
+        args="$(arg config_path)/ratslam.txt"
+        output="screen"
+        required="true" >
+    <remap from="odom"          to="cozmo/odom" />
+    <param name="pcn_file_path" value="$(arg config_path)/ratslam-latest.bpcn" />
+  </node>
+
+  <node name="RatSLAMExperienceMap" pkg="ratslam_ros" type="ratslam_em"
+        args="$(arg config_path)/ratslam.txt"
+        output="screen"
+        required="true" >
+    <remap from="odom"          to="cozmo/odom" />
+    <param name="map_file_path" value="$(arg config_path)/ratslam-latest.bmap" />
+  </node>
+
+  <node name="path_follower" pkg="ratslam_ros" type="path_follower.py"
+        output="screen" >
+    <remap from="cmd_vel" to="platform_control/cmd_vel" />
+    <remap from="path"      to="cozmo/ratslam/ExperienceMap/PathToGoal" />
+    <param name="min_lin_vel" value="0.05" />
+    <param name="max_lin_vel" value="0.20" />
+  </node>
+
+</launch>
