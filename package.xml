@@ -39,6 +39,7 @@
   <run_depend>teleop_twist_joy</run_depend>
   <run_depend>tf2_msgs</run_depend>
   <run_depend>twist_mux</run_depend>
+  <run_depend>rviz_imu_plugin</run_depend>
 
   <export>
   </export>

@@ -10,7 +10,7 @@ This is tested on Kinetic/Ubuntu16.04 and Android only. Latest version is tested
  * ROS Indigo/Kinetic
  * Python3.5
  * (Android)
- * (Cozmo SDK 0.10)
+ * (Cozmo SDK 0.10+)
 
 Use rosdep to install the required ROS packages:
 ```sh
